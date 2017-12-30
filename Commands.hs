@@ -1,10 +1,6 @@
 module Commands
 (
-	Pwd(..),
-	Cd(..),
-	Ls(..),
-	Cat(..),
-	Rm(..),
+	Command,
 	Path
 )
 
@@ -19,16 +15,19 @@ clear = system "clear"
 data Path = Full {content :: String} | Relative {content :: String} 
 	deriving Show
 
-data Pwd = Current deriving Show
-data Cd = Cd {arg :: Path} deriving Show
-data Ls = Other {argument :: Maybe Path} deriving Show
-data Cat = Concat {files :: [Path], output :: Maybe Path}
-			| Write {text :: String, output :: Maybe Path} deriving Show
-data Rm = Remove {args :: [Path]} deriving Show
+data Command = 
+	Current | 
+	Change {arg :: Path}| 
+	List {argument :: Maybe Path} | 
+	Concat {files :: [Path], output :: Maybe Path} |
+	Write {text :: String, output :: Maybe Path} |
+	Remove {args :: [Path]} deriving Show
+	
+data CommandHeaders = PWD | CD | LS |CAT | RM deriving (Show, Read)
 
-instance Read Path where
-read f@ ('/':rest) = Full f 
-read p = Relative p 
+resolvePath :: String -> Path
+resolvePath f @ ('/':rest) = Full f
+resolvePath p = Relative p 
 
 
 main = do
