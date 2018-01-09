@@ -9,8 +9,8 @@ module FileSystem
 
 where
 
-import Path
-import Data.Maybe
+import Path hiding (fromString)
+import Data.Maybe (fromJust, isNothing, isJust, listToMaybe)
 import Data.List (delete)
 
 
