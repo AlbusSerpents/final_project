@@ -46,17 +46,24 @@ file f n c
 	| isFolder f = 
 		let new = createFile f n c
 		in 
-			if isJust $ addChild f new then
-				(return new)
-			else
-				Nothing
+			link f new
 	| otherwise = Nothing
 
 folder :: FileSystem -> Name -> Maybe FileSystem
 folder f n 
-	| isFolder f = fmap (\e -> createFolder e n) $ Just f 
+	| isFolder f = 
+		let new = createFolder f n
+		in
+			link f new
 	| otherwise = Nothing
 
+link :: FileSystem -> FileSystem -> Maybe FileSystem
+link f new  = 	
+	if isJust $ addChild f new then
+		Just new
+	else
+		Nothing
+	
 addChild :: FileSystem -> FileSystem -> Maybe FileSystem
 addChild (File _ _ _) _ = Nothing
 addChild (Folder n ch p) c = Just $ Folder n (c:ch) p
