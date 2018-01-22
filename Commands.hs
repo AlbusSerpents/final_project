@@ -6,6 +6,7 @@ where
 
 import Path
 import FileSystem
+import System.IO
 
 data Pwd = Current deriving Show
 data Cd = Change {changeArg :: Path} deriving Show
@@ -15,5 +16,5 @@ data Rm = Remove {removeArgs :: [Path]} deriving Show
 
 class Command c where
 	execute :: c -> FileSystem -> Either (FileSystem, String) FileSystem
-	prepare :: c -> String
-	prepare _ = ""
+	prepare :: c -> IO c
+	prepare = return
