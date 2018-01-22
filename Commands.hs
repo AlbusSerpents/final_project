@@ -18,3 +18,6 @@ class Command c where
 	execute :: c -> FileSystem -> Either (FileSystem, String) FileSystem
 	prepare :: c -> IO c
 	prepare = return
+	
+instance Command Pwd where
+	execute Current f = Left (f, show $ fullFileName f)
