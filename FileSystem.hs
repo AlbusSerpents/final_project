@@ -12,7 +12,8 @@ module FileSystem
 	isFolder,
 	fullFileName,
 	name,
-	childern
+	children,
+	contents
 )
 
 where
@@ -24,7 +25,7 @@ import Data.Function (on)
 
 
 data FileSystem = File {name :: P.Name, contents :: String, parent :: Maybe FileSystem} 
-	| Folder {name :: P.Name, childern :: [FileSystem], parent :: Maybe FileSystem} 
+	| Folder {name :: P.Name, children :: [FileSystem], parent :: Maybe FileSystem} 
 
 instance Eq FileSystem where
 		a == b = on (==) name a b
@@ -77,7 +78,7 @@ link f new  = addChild f new
 remove :: FileSystem -> Maybe FileSystem
 remove f = fmap removal $ parent f
 	where
-		newChildren = deleteBy (on (==) name) f . childern
+		newChildren = deleteBy (on (==) name) f . children
 		removal e = Folder (name e) (newChildren e) (parent e)
 	
 write :: FileSystem -> String -> Maybe FileSystem
@@ -107,7 +108,7 @@ matching :: FileSystem -> [P.Name] -> Maybe FileSystem
 matching fs (x:xs)
 	| xs == [] && nameEquality = Just fs
 	| isFolder fs && nameEquality = 
-		listToMaybe $ filter (isJust . flip matching xs) $ childern fs 
+		listToMaybe $ filter (isJust . flip matching xs) $ children fs 
 	| otherwise = Nothing
 	where
 		nameEquality = name fs == x
