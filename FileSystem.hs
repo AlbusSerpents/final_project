@@ -13,6 +13,7 @@ where
 import Path hiding (fromString)
 import Data.Maybe (fromJust, isNothing, isJust, listToMaybe)
 import Data.List (delete)
+import Data.Function (on)
 
 
 data FileSystem = File {name :: Name, contents :: String, parent :: Maybe FileSystem} 
@@ -20,7 +21,7 @@ data FileSystem = File {name :: Name, contents :: String, parent :: Maybe FileSy
 	| Dummy {name :: Name}
 
 instance Eq FileSystem where
-		a == b = (name a) == (name b)
+		a == b = on (==) name a b
 	
 instance Show FileSystem where
 	show (File n c _) =  show n ++ " " ++ show c
@@ -35,9 +36,8 @@ isFile (File _ _ _) = True
 isFile _ = False	
 	
 root :: FileSystem -> FileSystem
-root (File	_ _ parent) = root $ fromJust parent
-root (Folder _ _ (Just parent)) = root parent
 root r @ (Folder _ _ Nothing) = r
+root f = root $ fromJust $ parent f
 
 isRoot :: FileSystem -> Bool
 isRoot = isNothing . parent
