@@ -46,8 +46,8 @@ isRelative _ = False
 hasNoContent :: Path -> Bool
 hasNoContent p = content p == []
 
-isParent :: Path -> Bool
-isParent p = content p == [parent]
+isParent :: Name -> Bool
+isParent n = n == parent
 
 fromString :: FilePath -> Path
 fromString fp 
