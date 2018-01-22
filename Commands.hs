@@ -86,6 +86,7 @@ instance Command Cat where
 		let textData = unlines _lines
 			in do
 				return (ConsoleInput textData d)
+	prepare c = return (c)
 
 readInput :: IO [String]
 readInput = do
