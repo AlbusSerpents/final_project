@@ -14,7 +14,7 @@ module FileSystem
 
 where
 
-import Path hiding (fromString)
+import Path hiding (fromString, parent)
 import Data.Maybe (fromJust, isNothing, isJust, listToMaybe)
 import Data.List (deleteBy)
 import Data.Function (on)
@@ -88,7 +88,9 @@ append f text
 	
 find :: FileSystem -> Path -> Maybe FileSystem
 find fs p
+	| hasNoContent p && isRelative p = Just fs
 	| isRelative p = matching fs $ content p
+	| hasNoContent p && isFull p = Just $ root fs
 	| isFull p = matching (root fs) $ content p 
 	| otherwise = Nothing
 	
