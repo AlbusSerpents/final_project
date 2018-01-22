@@ -7,7 +7,11 @@ module Path
 	isRelative,
 	fromString,
 	parent,
-	hasNoContent
+	hasNoContent,
+	fromNames,
+	root,
+	relative,
+	parent
 )
 
 where
@@ -47,3 +51,8 @@ fromString fp
 
 hasNoContent :: Path -> Bool
 hasNoContent p = content p == []
+
+fromNames :: [Name] -> Path
+fromNames ns@(x:xs) 
+	| root == x = Full ns
+	| otherwise = Relative ns
