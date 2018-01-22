@@ -81,7 +81,27 @@ instance Command Cat where
 			src = fromJust $ from c
 			dest = fromJust $ to c
 			text = getFileContents fContext src
+	prepare (Concat Nothing d) = do
+		_lines <- readInput
+		let textData = unlines _lines
+			in do
+				return (ConsoleInput textData d)
 
+readInput :: IO [String]
+readInput = do
+	input <- getLine
+	let 
+		processed = handleInput input
+		in do
+		if processed == [] then
+			return (processed)
+		else do
+			next <- readInput
+			return ((handleInput input)++next)
+	where
+		handleInput "." = []
+		handleInput s = [s]
+	
 getFileContents :: FileSystem -> [Path] -> String	
 getFileContents f =  concat . map contents . filter isFile . mapMaybe (find f)
 
