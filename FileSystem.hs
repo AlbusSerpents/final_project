@@ -98,6 +98,7 @@ fullFileName f = P.fromNames $ P.root:(reverse $ names $ Just f)
 	
 find :: FileSystem -> P.Path -> Maybe FileSystem
 find fs p
+	| P.isParent p = parent fs
 	| P.hasNoContent p && P.isRelative p = Just fs
 	| P.isRelative p = matching fs $ P.content p
 	| P.hasNoContent p && P.isFull p = Just $ root fs
