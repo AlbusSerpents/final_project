@@ -6,7 +6,10 @@ module FileSystem
 	folder,
 	write,
 	append,
-	remove
+	remove,
+	isRoot,
+	isFile,
+	isFolder
 )
 
 where
