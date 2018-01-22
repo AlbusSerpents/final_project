@@ -11,8 +11,9 @@ module Path
 	fromNames,
 	root,
 	relative,
-	parent,
-	isParent
+	isParent,
+	parents,
+	name
 )
 
 where
@@ -48,6 +49,12 @@ hasNoContent p = content p == []
 
 isParent :: Name -> Bool
 isParent n = n == parent
+
+name :: Path -> Name
+name = last . content
+
+parents :: Path -> [Name]
+parents = init . content
 
 fromString :: FilePath -> Path
 fromString fp 
