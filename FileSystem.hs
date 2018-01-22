@@ -1,5 +1,6 @@
 module FileSystem
 (
+	FileSystem,
 	find,
 	file,
 	folder,
