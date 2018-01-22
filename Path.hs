@@ -1,6 +1,7 @@
 module Path
 (
 	Path,
+	content,
 	Name,
 	isFull,
 	isRelative,
