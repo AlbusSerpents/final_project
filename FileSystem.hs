@@ -10,7 +10,9 @@ module FileSystem
 	isRoot,
 	isFile,
 	isFolder,
-	fullFileName
+	fullFileName,
+	name,
+	childern
 )
 
 where
