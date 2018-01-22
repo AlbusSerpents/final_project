@@ -48,11 +48,7 @@ instance Command Pwd where
 	execute curr f = Left (f, show $ fullFileName f)
 	
 instance Command Cd where
-	execute (Change p) f
-		| isJust found = Right $ fromJust found
-		| otherwise = Left (f, operationFailed)
-		where
-			found = find f p
+	execute (Change p) f = createResponse f $ find f p
 			
 instance Command Ls where
 	execute (List td) f
