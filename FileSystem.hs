@@ -98,7 +98,6 @@ fullFileName f = P.fromNames $ P.root:(reverse $ names $ Just f)
 	
 find :: FileSystem -> P.Path -> Maybe FileSystem
 find fs p
-	| P.isParent p = parent fs
 	| P.hasNoContent p && P.isRelative p = Just fs
 	| P.isRelative p = matching fs $ P.content p
 	| P.hasNoContent p && P.isFull p = Just $ root fs
@@ -107,6 +106,8 @@ find fs p
 	
 matching :: FileSystem -> [P.Name] -> Maybe FileSystem
 matching fs (x:xs)
+	| P.isParent x && xs == [] = parent fs
+	| P.isParent x = parent fs >>= (\f -> matching f xs) 
 	| xs == [] && nameEquality = Just fs
 	| isFolder fs && nameEquality = 
 		listToMaybe $ filter (isJust . flip matching xs) $ children fs 
