@@ -11,7 +11,8 @@ module Path
 	fromNames,
 	root,
 	relative,
-	parent
+	parent,
+	isParent
 )
 
 where
@@ -42,15 +43,18 @@ isRelative :: Path -> Bool
 isRelative (Relative _) = True
 isRelative _ = False
 
+hasNoContent :: Path -> Bool
+hasNoContent p = content p == []
+
+isParent :: Path -> Bool
+isParent p = content p == [parent]
+
 fromString :: FilePath -> Path
 fromString fp 
 	| head split == root = Full $ tail split
 	| otherwise = Relative split
 	where
 		split = splitPath fp
-
-hasNoContent :: Path -> Bool
-hasNoContent p = content p == []
 
 fromNames :: [Name] -> Path
 fromNames ns@(x:xs) 
