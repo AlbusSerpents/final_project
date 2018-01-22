@@ -13,7 +13,7 @@ module Path
 	relative,
 	isParent,
 	parents,
-	name
+	title
 )
 
 where
@@ -50,8 +50,8 @@ hasNoContent p = content p == []
 isParent :: Name -> Bool
 isParent n = n == parent
 
-name :: Path -> Name
-name = last . content
+title :: Path -> Name
+title = last . content
 
 parents :: Path -> [Name]
 parents = init . content
