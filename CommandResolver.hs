@@ -52,5 +52,5 @@ toResolve :: [String] -> Maybe Path
 toResolve = fmap fromString . listToMaybe . tail . dropWhile check
 
 instance CommandResolver Rm where
-	resolve (rm:args) = Left $ Remove $ map fromString args
+	resolve ("rm":args) = Left $ Remove $ map fromString args
 	resolve i = Right $ failedResolveError $ concat i
