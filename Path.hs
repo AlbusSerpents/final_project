@@ -5,7 +5,9 @@ module Path
 	Name,
 	isFull,
 	isRelative,
-	fromString
+	fromString,
+	parent,
+	hasNoContent
 )
 
 where
@@ -15,9 +17,18 @@ import System.FilePath (splitPath)
 type Name = String
 
 data Path = Full {content :: [Name]} | Relative {content :: [Name]} 
-	deriving (Show, Eq)
+	deriving (Eq)
 	
-root = "/"	
+instance Show Path where
+	show (Relative c) = show $ concat $ relative:c
+	show (Full c) = show $ concat $ root:c
+
+relative :: Name
+relative = "./"	
+root :: Name
+root = "/"
+parent :: Name
+parent = "../"
 	
 isFull :: Path -> Bool
 isFull (Full _) = True
@@ -29,9 +40,10 @@ isRelative _ = False
 
 fromString :: FilePath -> Path
 fromString fp 
-	| head split == root = Full split
+	| head split == root = Full $ tail split
 	| otherwise = Relative split
 	where
 		split = splitPath fp
 
-	
+hasNoContent :: Path -> Bool
+hasNoContent p = content p == []
