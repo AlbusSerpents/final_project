@@ -9,19 +9,20 @@ module FileSystem
 	remove,
 	isRoot,
 	isFile,
-	isFolder
+	isFolder,
+	fullFileName
 )
 
 where
 
-import Path hiding (fromString, parent)
+import qualified Path as P
 import Data.Maybe (fromJust, isNothing, isJust, listToMaybe)
 import Data.List (deleteBy)
 import Data.Function (on)
 
 
-data FileSystem = File {name :: Name, contents :: String, parent :: Maybe FileSystem} 
-	| Folder {name :: Name, childern :: [FileSystem], parent :: Maybe FileSystem} 
+data FileSystem = File {name :: P.Name, contents :: String, parent :: Maybe FileSystem} 
+	| Folder {name :: P.Name, childern :: [FileSystem], parent :: Maybe FileSystem} 
 
 instance Eq FileSystem where
 		a == b = on (==) name a b
@@ -45,7 +46,7 @@ root f = root $ fromJust $ parent f
 isRoot :: FileSystem -> Bool
 isRoot = isNothing . parent
 
-file :: FileSystem -> Name -> String -> Maybe FileSystem
+file :: FileSystem -> P.Name -> String -> Maybe FileSystem
 file f n c
 	| isFolder f = 
 		let new = createFile f n c
@@ -55,7 +56,7 @@ file f n c
 	where
 		createFile f n c =  File n c $ Just f
 
-folder :: FileSystem -> Name -> Maybe FileSystem
+folder :: FileSystem -> P.Name -> Maybe FileSystem
 folder f n 
 	| isFolder f = 
 		let new = createFolder f n
@@ -85,16 +86,22 @@ append :: FileSystem -> String -> Maybe FileSystem
 append f text 
 	|isFile f = write f $  contents f ++ text
 	| otherwise = Nothing
+
+fullFileName :: FileSystem -> P.Path
+fullFileName f = P.fromNames $ P.root:(reverse $ names $ Just f)
+	where	
+		names Nothing = []	
+		names (Just e) = (name e):(names $ parent e)	
 	
-find :: FileSystem -> Path -> Maybe FileSystem
+find :: FileSystem -> P.Path -> Maybe FileSystem
 find fs p
-	| hasNoContent p && isRelative p = Just fs
-	| isRelative p = matching fs $ content p
-	| hasNoContent p && isFull p = Just $ root fs
-	| isFull p = matching (root fs) $ content p 
+	| P.hasNoContent p && P.isRelative p = Just fs
+	| P.isRelative p = matching fs $ P.content p
+	| P.hasNoContent p && P.isFull p = Just $ root fs
+	| P.isFull p = matching (root fs) $ P.content p 
 	| otherwise = Nothing
 	
-matching :: FileSystem -> [Name] -> Maybe FileSystem
+matching :: FileSystem -> [P.Name] -> Maybe FileSystem
 matching fs (x:xs)
 	| xs == [] && nameEquality = Just fs
 	| isFolder fs && nameEquality = 
