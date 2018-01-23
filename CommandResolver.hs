@@ -20,8 +20,14 @@ import FileSystem
 data CommandMacros = PWD | CD |	LS | CAT | RM deriving (Show, Eq, Read)
 type ResolvedCommand c = Either c String
 
-resolveMacro :: String -> CommandMacros
-resolveMacro = read . map toUpper
+resolveMacro :: String -> Maybe CommandMacros
+resolveMacro m 
+	| m == "pwd" = Just PWD 
+	| m == "cd" = Just CD 
+	| m == "ls" = Just LS 
+	| m == "cat" = Just CAT 
+	| m == "rm" = Just RM 
+	| otherwise = Nothing
 
 resolveCommand :: (CommandResolver c, Command c) =>
 		[String] -> ResolvedCommand c
