@@ -6,14 +6,15 @@ module Path
 	isFull,
 	isRelative,
 	fromString,
-	parent,
-	hasNoContent,
 	fromNames,
-	root,
-	relative,
+	hasNoContent,
 	isParent,
 	parents,
-	title
+	title,
+	root,
+	this,
+	relative,
+	parent
 )
 
 where
@@ -29,12 +30,17 @@ instance Show Path where
 	show (Relative c) = show $ concat $ relative:c
 	show (Full c) = show $ concat c
 
-relative :: Name
-relative = "./"	
+this :: Name
+this = "."
+
 root :: Name
 root = "/"
+
+relative :: Name
+relative = this ++ root	
+
 parent :: Name
-parent = "../"
+parent = this ++ this ++ root
 	
 isFull :: Path -> Bool
 isFull (Full _) = True
@@ -64,6 +70,7 @@ fromString fp
 		split = splitPath fp
 
 fromNames :: [Name] -> Path
+fromNames [] = Relative []
 fromNames ns@(x:xs) 
-	| root == x = Full ns
+	| root == x = Full xs
 	| otherwise = Relative ns
