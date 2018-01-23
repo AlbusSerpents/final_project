@@ -95,7 +95,7 @@ append f text
 	| otherwise = Nothing
 
 fullFileName :: FileSystem -> P.Path
-fullFileName f = P.fromNames $ P.root:(reverse $ names $ Just f)
+fullFileName = P.fromNames . (P.root:) . reverse . names . Just
 	where	
 		names Nothing = []	
 		names (Just e) = (name e):(names $ parent e)	
@@ -103,7 +103,7 @@ fullFileName f = P.fromNames $ P.root:(reverse $ names $ Just f)
 find :: FileSystem -> P.Path -> Maybe FileSystem
 find fs p
 	| P.hasNoContent p && P.isRelative p = Just fs
-	| P.isRelative p = matching fs $ P.content p
+	| P.isRelative p = matching fs $ P.relative:P.content p
 	| P.hasNoContent p && P.isFull p = Just $ root fs
 	| P.isFull p = matching (root fs) $ P.content p 
 	| otherwise = Nothing
@@ -113,8 +113,9 @@ matching fs (x:xs)
 	| P.isParent x && xs == [] = parent fs
 	| P.isParent x = parent fs >>= (\f -> matching f xs) 
 	| xs == [] && nameEquality = Just fs
-	| isFolder fs && nameEquality = 
+	| isFolder fs && (nameEquality || matchRelative) = 
 		listToMaybe $ filter (isJust . flip matching xs) $ children fs 
 	| otherwise = Nothing
 	where
+		matchRelative = isFolder fs && x == P.relative
 		nameEquality = name fs == x
