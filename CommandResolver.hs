@@ -2,7 +2,8 @@ module CommandResolver
 (
 	CommandMacros(..),
 	resolveCommand,
-	resolveMacro
+	resolveMacro,
+	ResolvedCommand
 )
 
 where
@@ -17,12 +18,13 @@ import Data.Char (toUpper)
 import FileSystem
 
 data CommandMacros = PWD | CD |	LS | CAT | RM deriving (Show, Eq, Read)
+type ResolvedCommand c = Either c String
 
 resolveMacro :: String -> CommandMacros
 resolveMacro = read . map toUpper
 
 resolveCommand :: (CommandResolver c, Command c) =>
-		[String] -> Either c String
+		[String] -> ResolvedCommand c
 resolveCommand args = resolve args
 	
 streamRedirect = ">"
