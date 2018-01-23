@@ -1,12 +1,19 @@
 module Commands
 (
-
+	Pwd(..),
+	Cd(..),
+	Ls(..),
+	Cat(Concat),
+	Rm(..),
+	Response,
+	Command(execute, prepare)	
 )
 where
 
-import Path
-import FileSystem
-import System.IO 
+import Path (Path, title, fromNames, parents)
+import FileSystem 
+	(FileSystem, remove, find, fullFileName, 
+	name, children, contents, isFile, file, write)
 import Data.Maybe (isJust, fromJust, mapMaybe)
 import Data.List (intersperse)
 
@@ -71,7 +78,7 @@ instance Command Cat where
 		| isConcat c && hasSources && hasDestination = 
 			handleCatDestination fContext dest text
 		| isConcat c && hasSources && not hasDestination = Left (fContext, text)
-		| isConsole c && not hasDestination = Left (fContext, text)
+		| isConsole c && not hasDestination = Left (fContext, input c)
 		| isConsole c && hasDestination = 
 			handleCatDestination fContext dest $ input c
 		| otherwise = Left (fContext, operationFailed)
@@ -126,3 +133,8 @@ writeToFile fs p text =
 			Just fs >>= 
 			(\f -> find f parentPath) >>=
 			(\f -> file f fileName text)
+			
+instance Command Rm where
+	execute (Remove files) fs = createResponse fs $ 
+		foldl (\b -> \p -> b >>= (flip find p)>>= remove) (Just fs) files
+		
