@@ -4,6 +4,7 @@ module FileSystem
 	find,
 	file,
 	folder,
+	createRoot,
 	write,
 	append,
 	remove,
@@ -48,6 +49,9 @@ root f = root $ fromJust $ parent f
 
 isRoot :: FileSystem -> Bool
 isRoot = isNothing . parent
+
+createRoot :: P.Name -> FileSystem
+createRoot n = Folder n [] Nothing
 
 file :: FileSystem -> P.Name -> String -> Maybe FileSystem
 file f n c
