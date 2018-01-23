@@ -1,44 +1,56 @@
 module CommandResolver
 (
-
+	CommandMacros(..),
+	resolveCommand,
+	resolveMacro
 )
 
 where
 
-import Path
-import Commands
-import Data.Either
+import Path (Path, fromString)
+import Commands hiding (execute, prepare)
+import Data.Either (Either(Left), Either(Right))
 import Data.List (takeWhile, dropWhile)
-import Data.Maybe
+import Data.Maybe (listToMaybe)
+import Data.Char (toUpper)
 
---resolve ("cat":[]) = undefined --CAT
---resolve ("rm":[]) = undefined --RM
---resolve _ = undefined
+import FileSystem
 
+data CommandMacros = PWD | CD |	LS | CAT | RM deriving (Show, Eq, Read)
+
+resolveMacro :: String -> CommandMacros
+resolveMacro = read . map toUpper
+
+resolveCommand :: (CommandResolver c, Command c) =>
+		[String] -> Either c String
+resolveCommand args = resolve args
+	
 streamRedirect = ">"
 
 failedResolveError :: String -> String
-failedResolveError i = "Error while reading command " ++ i
+failedResolveError i = "Error while reading command: " ++ i
 
 class CommandResolver c where
 	resolve :: [String] -> Either c String
 
 instance CommandResolver Pwd where
-	resolve ("pwd":[]) = Left Current
+	resolve [] = Left Current
 	resolve i = Right $ failedResolveError $ concat i
 	
 instance CommandResolver Cd where
-	resolve ("cd":paths:[]) = Left $ Change $ fromString paths
+	resolve (path:[]) = Left $ Change $ fromString path
 	resolve i = Right $ failedResolveError $ concat i
 	
 instance CommandResolver Ls where
-	resolve ("ls":[]) = Left $ List Nothing
-	resolve ("ls":path:[]) = Left $ List $ Just $ fromString path
+	resolve [] = Left $ List Nothing
+	resolve (path:[]) = Left $ List $ Just $ fromString path
 	resolve i = Right $ failedResolveError $ concat i
 	
 instance CommandResolver Cat where
-	resolve ("cat":args) = Left $ Concat (fromResolve args) (toResolve args)
-	resolve i = Right $ failedResolveError $ concat i
+	resolve args 
+		| streamRedirect `elem` args = 
+			Left $ Concat (fromResolve args) (toResolve args)
+		| otherwise = Right $ failedResolveError $ concat args
 
 check = (/=) streamRedirect
 
@@ -52,5 +64,5 @@ toResolve :: [String] -> Maybe Path
 toResolve = fmap fromString . listToMaybe . tail . dropWhile check
 
 instance CommandResolver Rm where
-	resolve ("rm":args) = Left $ Remove $ map fromString args
+	resolve paths@(x:xs) = Left $ Remove $ map fromString paths
 	resolve i = Right $ failedResolveError $ concat i
