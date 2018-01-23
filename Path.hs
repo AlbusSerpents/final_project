@@ -27,7 +27,7 @@ data Path = Full {content :: [Name]} | Relative {content :: [Name]}
 	
 instance Show Path where
 	show (Relative c) = show $ concat $ relative:c
-	show (Full c) = show $ concat $ root:c
+	show (Full c) = show $ concat c
 
 relative :: Name
 relative = "./"	
