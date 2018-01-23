@@ -63,10 +63,10 @@ instance CommandResolver Cat where
 check = (/=) streamRedirect
 
 fromResolve :: [String] -> Maybe [Path]
-fromResolve = 
-	sequence . 
-	map (listToMaybe . (:[]) . fromString) . 
-	takeWhile check
+fromResolve = func . takeWhile check
+	where
+		func [] = Nothing
+		func list = sequence $ map (Just . fromString) list
 	
 toResolve :: [String] -> Maybe Path
 toResolve = fmap fromString . listToMaybe . tail . dropWhile check
