@@ -128,7 +128,7 @@ writeToFile fs p text =
 		parentPath = fromNames $ parents p
 	in
 		if isJust newFile then
-			write (fromJust newFile) text
+			newFile >>= (\f -> write f text)
 		else
 			Just fs >>= 
 			(\f -> find f parentPath) >>=
