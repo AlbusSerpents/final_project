@@ -48,6 +48,7 @@ parents :: Path -> Path
 parents = Absolute . init . content
 
 unroot :: Path -> [Name]
+unroot (Absolute []) = []
 unroot (Absolute (n:ns)) = ns
 	
 toAbsolute :: Path -> Path
