@@ -13,51 +13,50 @@ import Path
 
 import System.IO
 
-processCommand :: FileSystem -> Maybe CommandMacros -> [String] -> IO Response
-processCommand f jMacro arr
-	| isNothing jMacro = return $ Left (f, "Invalid command!")
-	| cmd == PWD = executeCommand f $ (resolveCommand arr :: ResolvedCommand Pwd)
-	| cmd == CD = executeCommand f $ (resolveCommand arr :: ResolvedCommand Cd)
-	| cmd == LS = executeCommand f $ (resolveCommand arr :: ResolvedCommand Ls)
-	| cmd == CAT = executeCommand f $ (resolveCommand arr :: ResolvedCommand Cat)
-	| cmd == RM = executeCommand f $ (resolveCommand arr :: ResolvedCommand Rm)
-	| otherwise = return $ Left (f, "Unsupported command!")
+processCommand :: FileSystem Bool -> Maybe CommandMacros -> [String] -> IO Response
+processCommand r jMacro arr
+	| isNothing jMacro = return $ Left (r, "Invalid command!")
+	| cmd == PWD = executeCommand r $ (resolveCommand arr path :: ResolvedCommand Pwd)
+	| cmd == CD = executeCommand r $ (resolveCommand arr path :: ResolvedCommand Cd)
+	| cmd == LS = executeCommand r $ (resolveCommand arr path :: ResolvedCommand Ls)
+	| cmd == CAT = executeCommand r $ (resolveCommand arr path :: ResolvedCommand Cat)
+	| cmd == RM = executeCommand r $ (resolveCommand arr path :: ResolvedCommand Rm)
+	| otherwise = return $ Left (r, "Unsupported command!")
 	where
 		cmd = fromJust jMacro
+		path = focus r
 
-test :: (Command c) => FileSystem -> ResolvedCommand c -> IO Response
-test fs (Left c) = do
+test :: (Command c) => FileSystem Bool -> ResolvedCommand c -> IO Response
+test r (Left c) = do
 	newC <- prepare c
-	return $ execute newC fs
+	return $ execute newC r
 	
-executeCommand :: (Command c) => FileSystem -> ResolvedCommand c -> IO Response
-executeCommand fs (Right err) = return $ Left (fs, err)
-executeCommand fs (Left c) = do
+executeCommand :: (Command c) => FileSystem Bool -> ResolvedCommand c -> IO Response
+executeCommand r (Right err) = return $ Left (r, err)
+executeCommand r (Left c) = do
 	newC <- prepare c
-	return $ execute newC fs
+	return $ execute newC r
 		
-processResponse :: Response -> IO FileSystem
-processResponse (Right fs) = do return (fs)
-processResponse (Left (fs, str)) = do
+processResponse :: Response -> IO (FileSystem Bool)
+processResponse (Right r) = do return r
+processResponse (Left (r, str)) = do
 	putStrLn str
-	return (fs)
+	return r
 		
-processInput :: FileSystem -> String -> [String] -> IO FileSystem
-processInput fs m args = do
-	resp <- processCommand fs macro args
-	newFs <- processResponse resp
-	return newFs
+processInput :: FileSystem Bool -> String -> [String] -> IO (FileSystem Bool)
+processInput r m args = do
+	resp <- processCommand r macro args
+	newR <- processResponse resp
+	return newR
 	where
 		macro = resolveMacro m
 	
-interactiveMode :: FileSystem -> IO ()
-interactiveMode fs = do
+interactiveMode :: FileSystem Bool -> IO ()
+interactiveMode r = do
 	input <- getLine
 	case words input of 
-		[] -> interactiveMode fs
+		[] -> interactiveMode r
 		(":q":[]) -> return ()
 		(macro:args) -> do
-			newFs <- processInput fs macro args
+			newFs <- processInput r macro args
 			interactiveMode newFs
-	where
-		quitMacro = ":q"
