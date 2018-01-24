@@ -10,11 +10,9 @@ module Commands
 )
 where
 
-import Path (Path, title, fromNames, parents)
-import FileSystem 
-	(FileSystem, remove, find, fullFileName, 
-	name, children, contents, isFile, file, write)
-import Data.Maybe (isJust, fromJust, mapMaybe)
+import Path
+import FileSystem
+import Data.Maybe (isJust, fromJust, mapMaybe, fromMaybe)
 import Data.List (intersperse)
 
 data Pwd = Current deriving Show
@@ -24,70 +22,40 @@ data Cat = Concat { from :: Maybe [Path], to :: Maybe Path }
 	| ConsoleInput { input :: String, to :: Maybe Path } deriving Show	
 data Rm = Remove {removeArgs :: [Path]} deriving Show
 
-type Response = Either (FileSystem, String) FileSystem
-
-isConcat :: Cat -> Bool
-isConcat (Concat _ _) = True
-isConcat _ = False
-
-isConsole :: Cat -> Bool
-isConsole (ConsoleInput _ _) = True
-isConsole _ = False
+type Response = Either (FileSystem Bool, String) (FileSystem Bool)
 
 class Command c where
-	execute :: c -> FileSystem -> Response
+	execute :: c -> FileSystem a -> Response
 	prepare :: c -> IO c
 	prepare = return
 	
-processOutput :: Maybe String -> String
-processOutput input
-	| isJust input = fromJust input
-	| otherwise = operationFailed
-	
-createResponse :: FileSystem -> Maybe FileSystem -> Response
-createResponse _ (Just success) = Right success
-createResponse baseContext Nothing = Left (baseContext, operationFailed)
+createResponse :: FileSystem Bool -> Response
+createResponse r 
+	| result r = Right r
+	| otherwise = Left (r, operationFailed)
 
 operationFailed = "The requested operation failed. Non- fatal error!"	
 	
-
 instance Command Pwd where
-	execute curr f = Left (f, show $ fullFileName f)
+	execute curr r = Left (changeResult r True, show $ focus r)
 	
 instance Command Cd where
-	execute (Change p) f = createResponse f $ find f p
+	execute (Change path) r = Right $ changeFocus r $ toAbsolute path
 			
 instance Command Ls where
-	execute (List td) f
-		| isJust td = 
-			let 
-				fs = find f $ fromJust td
-				contents = getChildrenNames fs
-			in
-				Left (f, processOutput contents)
-		| otherwise = Left (f, processOutput $ getChildrenNames $ Just f) 
-		
-		
-getChildrenNames :: Maybe FileSystem -> Maybe String
-getChildrenNames f = concatChildren <$> f
-	where
-		concatChildren = concat . intersperse ", " . map name . children
+	execute (List path) r 
+		| isJust path = Left (changeResult r True, processResponse $ getFolderContents r $ listPath path)
+		| otherwise = Left (changeResult r True, processResponse $ getFolderContents r $ focus r)
+		where
+			listPath = toAbsolute . fromJust
+
+processResponse :: FileSystem (Bool, Maybe String) -> String
+processResponse r
+	| isJust $ snd $ result r = fromJust $ snd $ result r
+	| otherwise = operationFailed
 		
 instance Command Cat where
-	execute c fContext 
-		| isConcat c && hasSources && hasDestination = 
-			handleCatDestination fContext dest text
-		| isConcat c && hasSources && not hasDestination = Left (fContext, text)
-		| isConsole c && not hasDestination = Left (fContext, input c)
-		| isConsole c && hasDestination = 
-			handleCatDestination fContext dest $ input c
-		| otherwise = Left (fContext, operationFailed)
-		where
-			hasSources = isJust $ from c
-			hasDestination = isJust $ to c
-			src = fromJust $ from c
-			dest = fromJust $ to c
-			text = getFileContents fContext src
+	execute c r = cat c r
 	prepare (Concat Nothing d) = do
 		_lines <- readInput
 		let textData = unlines _lines
@@ -95,6 +63,18 @@ instance Command Cat where
 				return (ConsoleInput textData d)
 	prepare c = return (c)
 
+cat :: Cat -> FileSystem a -> Response
+cat (Concat (Just src) (Just dst)) r = createAndWrite r dst $ readFromFiles r src
+cat (Concat (Just src) Nothing) r = Left (changeResult r True, readFromFiles r src)
+cat (ConsoleInput input Nothing) r = Left (changeResult r True, input)
+cat (ConsoleInput input (Just dst)) r = createAndWrite r dst input
+	
+readFromFiles :: FileSystem a -> [Path] -> String
+readFromFiles r = foldl (\b -> \a -> readConcat b $ result a) "" . map (readFromFile r)
+	where
+		readConcat base (_, Nothing) = base
+		readConcat base (_, Just s) = s ++ base
+	
 readInput :: IO [String]
 readInput = do
 	input <- getLine
@@ -102,39 +82,25 @@ readInput = do
 		processed = handleInput input
 		in do
 		if processed == [] then
-			return (processed)
+			return processed
 		else do
 			next <- readInput
-			return ((handleInput input)++next)
+			return (processed++next)
 	where
 		handleInput "." = []
 		handleInput s = [s]
 	
-getFileContents :: FileSystem -> [Path] -> String	
-getFileContents f =  concat . map contents . filter isFile . mapMaybe (find f)
-
-handleCatDestination :: FileSystem -> Path -> String -> Response
-handleCatDestination fs dest text = 
-	createResponse fs $
-	Just fs >>= 
-	(\f -> writeToFile fs dest text) >>=
-	(\f -> find f $ fullFileName fs)
-
-writeToFile :: FileSystem -> Path -> String -> Maybe FileSystem
-writeToFile fs p text = 
-	let
-		newFile = find fs p
-		fileName = title p
-		parentPath = fromNames $ parents p
-	in
-		if isJust newFile then
-			newFile >>= (\f -> write f text)
-		else
-			Just fs >>= 
-			(\f -> find f parentPath) >>=
-			(\f -> file f fileName text)
+createAndWrite :: FileSystem a -> Path -> String -> Response
+createAndWrite r p text = 
+	createResponse $
+	if result $ exists r p then
+		writeToFile r p text
+	else
+		file r (parents p) (title p) text
 			
 instance Command Rm where
-	execute (Remove files) fs = createResponse fs $ 
-		foldl (\b -> \p -> b >>= (flip find p)>>= remove) (Just fs) files
-		
+	execute (Remove paths) r = remove paths r
+
+remove :: [Path] -> FileSystem a -> Response
+remove [] r = createResponse $ changeResult r True
+remove (p:ps) r = remove ps $ removeElement r p 
