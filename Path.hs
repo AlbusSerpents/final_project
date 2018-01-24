@@ -59,6 +59,6 @@ toAbsolute (Relative c p) = Absolute $ absoluteName ++ c
 fromString :: Path -> FilePath -> Path
 fromString p fp 
 	| head split == root = Absolute $ root:(map (delete '/') $ tail split)
-	| otherwise = Relative split p
+	| otherwise = toAbsolute $ Relative split p
 	where
 		split = splitPath fp
