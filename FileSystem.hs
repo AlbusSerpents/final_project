@@ -1,121 +1,153 @@
 module FileSystem
 (
 	FileSystem,
-	find,
+	focus,
+	changeFocus,
+	getFolderContents,
+	root,
 	file,
 	folder,
-	createRoot,
-	write,
-	append,
-	remove,
-	isRoot,
-	isFile,
-	isFolder,
-	fullFileName,
-	name,
-	children,
-	contents
+	removeElement,
+	writeToFile,
+	appendToFile
 )
 
 where
 
 import qualified Path as P
-import Data.Maybe (fromJust, isNothing, isJust, listToMaybe)
-import Data.List (deleteBy)
+import Data.Maybe (fromJust, isNothing, isJust, listToMaybe, fromMaybe, mapMaybe)
 import Data.Function (on)
+import Data.Either (Either(Left), Either(Right))
+import Data.List (intersperse)
 
+data FileSystem a = Root {rootDir :: FileSystemElement, focus :: P.Path, result :: a}
+data FileSystemElement = 
+	File {name :: P.Name, text :: String} | 
+	Folder {name :: P.Name, children :: [FileSystemElement]}
 
-data FileSystem = File {name :: P.Name, contents :: String, parent :: Maybe FileSystem} 
-	| Folder {name :: P.Name, children :: [FileSystem], parent :: Maybe FileSystem} 
-
-instance Eq FileSystem where
-		a == b = on (==) name a b
+type Action = (FileSystemElement -> Maybe FileSystemElement)		
 	
-instance Show FileSystem where
-	show (File n c _) =  show n ++ " " ++ show c
-	show (Folder n c _) =  show n ++ " " ++ show c
+instance Show FileSystemElement where
+	show (File n c) =  show n ++ " " ++ show c
+	show (Folder n c) =  show n ++ " " ++ show c
+
+instance Show (FileSystem a) where
+	show = show . rootDir
 	
-isFolder :: FileSystem -> Bool
-isFolder (Folder _ _ _) = True
-isFolder _ = False
+changeFocus :: FileSystem a -> P.Path -> FileSystem Bool
+changeFocus (Root rd focus _) path = Root rd path True
 
-isFile :: FileSystem -> Bool
-isFile (File _ _ _) = True
-isFile _ = False	
+changeResult :: FileSystem a -> b -> FileSystem b
+changeResult (Root rd focus res) newRes = Root rd focus newRes 
+
+root :: FileSystem Bool
+root = Root (Folder P.root []) (P.rootPath) True
+
+file :: FileSystem a -> P.Path -> P.Name -> String -> FileSystem Bool
+file r p fileName fileContent = addElement r p $ File fileName fileContent
 	
-root :: FileSystem -> FileSystem
-root r @ (Folder _ _ Nothing) = r
-root f = root $ fromJust $ parent f
-
-isRoot :: FileSystem -> Bool
-isRoot = isNothing . parent
-
-createRoot :: P.Name -> FileSystem
-createRoot n = Folder n [] Nothing
-
-file :: FileSystem -> P.Name -> String -> Maybe FileSystem
-file f n c
-	| isFolder f = 
-		let new = createFile f n c
-		in 
-			link f new
-	| otherwise = Nothing
+folder :: FileSystem a -> P.Path -> P.Name -> FileSystem Bool
+folder r p folderName = addElement r p $ Folder folderName []
+	
+addElement :: FileSystem a -> P.Path -> FileSystemElement -> FileSystem Bool
+addElement r path newElement = executeAction r parentPath (`add` newElement)
 	where
-		createFile f n c =  File n c $ Just f
+		parentPath = P.parents path
+		
+removeElement :: FileSystem a -> P.Path -> FileSystem Bool
+removeElement r path 
+	| path == P.rootPath = root
+	| path == focus r = Root (rootDir newRoot) P.rootPath True
+	| otherwise = newRoot
+	where
+		parentPath = P.parents path
+		elementName = P.title path
+		newRoot = executeAction r parentPath (`delete` elementName)
+	
+writeToFile :: FileSystem a -> P.Path -> String -> FileSystem Bool
+writeToFile r path text = executeAction r path (`write` text)
 
-folder :: FileSystem -> P.Name -> Maybe FileSystem
-folder f n 
-	| isFolder f = 
-		let new = createFolder f n
-		in
-			link f new
-	| otherwise = Nothing
-	where
-		createFolder f n = Folder n [] $ Just f	
+appendToFile :: FileSystem a -> P.Path-> String -> FileSystem Bool
+appendToFile r path textToAppend = 
+	fromMaybe (changeResult r False) $ 
+		return path >>= 
+		(find r) >>= 
+		(\f -> appendText f textToAppend) >>= 
+		(\t -> return $ writeToFile r path t)
 
-link :: FileSystem -> FileSystem -> Maybe FileSystem
-link f new  = addChild f new
-	where
-		addChild (File _ _ _) _ = Nothing
-		addChild (Folder n ch p) c = Just $ Folder n (c:ch) p
-	
-remove :: FileSystem -> Maybe FileSystem
-remove f = fmap removal $ parent f
-	where
-		newChildren = deleteBy (on (==) name) f . children
-		removal e = Folder (name e) (newChildren e) (parent e)
-	
-write :: FileSystem -> String -> Maybe FileSystem
-write (File name _  parent) text = Just $ File name text parent
-write _ _ = Nothing
-	
-append :: FileSystem -> String -> Maybe FileSystem
-append f text 
-	|isFile f = write f $  contents f ++ text
-	| otherwise = Nothing
+appendText :: FileSystemElement -> String -> Maybe String
+appendText (Folder _ _) _ = Nothing
+appendText (File n text) moreText = Just $ text ++ moreText
 
-fullFileName :: FileSystem -> P.Path
-fullFileName = P.fromNames . (P.root:) . reverse . names . Just
-	where	
-		names Nothing = []	
-		names (Just e) = (name e):(names $ parent e)	
-	
-find :: FileSystem -> P.Path -> Maybe FileSystem
-find fs p
-	| P.hasNoContent p && P.isRelative p = Just fs
-	| P.isRelative p = matching fs $ P.relative:P.content p
-	| P.hasNoContent p && P.isFull p = Just $ root fs
-	| P.isFull p = matching (root fs) $ P.content p 
-	| otherwise = Nothing
-	
-matching :: FileSystem -> [P.Name] -> Maybe FileSystem
-matching fs (x:xs)
-	| P.isParent x && xs == [] = parent fs
-	| P.isParent x = parent fs >>= (\f -> matching f xs) 
-	| xs == [] && nameEquality = Just fs
-	| isFolder fs && (nameEquality || matchRelative) = 
-		listToMaybe $ filter (isJust . flip matching xs) $ children fs 
-	| otherwise = Nothing
+getFolderContents :: FileSystem Bool -> P.Path -> FileSystem (Bool, Maybe String)
+getFolderContents r p = maybeToEither r $ return p >>= (find r) >>= getChildren
 	where
-		matchRelative = isFolder fs && x == P.relative
-		nameEquality = name fs == x
+		maybeToEither r Nothing = changeResult r $ (False, Nothing)
+		maybeToEither r folderContents = changeResult r $ (True, folderContents)
+
+getChildren :: FileSystemElement -> Maybe String
+getChildren (File _ _) = Nothing
+getChildren (Folder n children) = Just $ concat $ intersperse ", " $ map name children
+		
+executeAction :: FileSystem a -> P.Path -> Action -> FileSystem Bool
+executeAction r path action = replace r path $ return path >>= (find r) >>= action
+		
+replace :: FileSystem a -> P.Path -> Maybe FileSystemElement -> FileSystem Bool
+replace r _ Nothing = changeResult r False
+replace (Root rd focus res) p (Just e) = Root newRd focus True
+	where
+		names = P.unroot p
+		newRd = replaceElements rd names e
+
+replaceElements :: FileSystemElement -> [P.Name] -> FileSystemElement -> FileSystemElement
+replaceElements f [] new = new
+replaceElements f@(File _ _) _ new = f
+replaceElements folder@(Folder name children) (n:[]) new
+	| hasChild folder n = Folder name $ replaceChild new children
+	| otherwise = folder
+replaceElements folder@(Folder name children) (n:ns) new
+	| hasChild folder n = Folder name $ map (\f -> replaceElements f ns new) children
+	| otherwise = folder
+	
+find :: FileSystem a -> P.Path -> Maybe FileSystemElement
+find (Root rd focus res) p = recursiveFind rd names
+	where 
+		names = P.unroot p
+		
+recursiveFind :: FileSystemElement -> [P.Name] -> Maybe FileSystemElement
+recursiveFind f@(File name _) (n:ns)
+	| name == n && ns == [] = Just f
+	| otherwise = Nothing
+recursiveFind f@(Folder name children) (n:ns)
+	| n == name && ns == [] = Just f
+	| n == name = listToMaybe $ mapMaybe (flip recursiveFind ns) children
+	| otherwise = Nothing
+	
+
+hasChild :: FileSystemElement -> P.Name -> Bool
+hasChild (File _ _) _ = False
+hasChild (Folder _ children) targetName = elem targetName $ map name children
+	
+replaceChild :: FileSystemElement -> [FileSystemElement] -> [FileSystemElement]
+replaceChild _ [] = []
+replaceChild new (x:xs)
+	| on (==) name new x = new:xs
+	| otherwise = x:(replaceChild new xs)
+
+add :: FileSystemElement -> FileSystemElement -> Maybe FileSystemElement
+add (File _ _) _ = Nothing
+add (Folder n c) new = Just $ Folder n (new:c)
+	
+delete :: FileSystemElement -> P.Name -> Maybe FileSystemElement
+delete (File _ _) _ = Nothing
+delete (Folder n c) dName = Just $ Folder n $ deleteBy (\e -> name e == dName) c
+
+deleteBy :: (FileSystemElement -> Bool) -> [FileSystemElement] -> [FileSystemElement]
+deleteBy f [] = []
+deleteBy f (x:xs)
+	| f x = deleteBy f xs
+	| otherwise = x:(deleteBy f xs)
+	
+write :: FileSystemElement -> String -> Maybe FileSystemElement
+write (Folder _ _) _ = Nothing
+write (File n c) text = Just $ File n text	
