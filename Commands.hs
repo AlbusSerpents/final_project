@@ -40,14 +40,14 @@ instance Command Pwd where
 	execute curr r = Left (changeResult r True, show $ focus r)
 	
 instance Command Cd where
-	execute (Change path) r = Right $ changeFocus r $ toAbsolute path
+	execute (Change path) r = Right $ changeFocus r path
 			
 instance Command Ls where
 	execute (List path) r 
 		| isJust path = Left (changeResult r True, processResponse $ getFolderContents r $ listPath path)
 		| otherwise = Left (changeResult r True, processResponse $ getFolderContents r $ focus r)
 		where
-			listPath = toAbsolute . fromJust
+			listPath = fromJust
 
 processResponse :: FileSystem (Bool, Maybe String) -> String
 processResponse r
