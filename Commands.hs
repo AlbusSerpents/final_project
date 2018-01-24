@@ -5,6 +5,7 @@ module Commands
 	Ls(..),
 	Cat(Concat),
 	Rm(..),
+	Mkdir(..),
 	Response,
 	Command(execute, prepare)	
 )
@@ -21,6 +22,7 @@ data Ls = List {listArg :: Maybe Path } deriving Show
 data Cat = Concat { from :: Maybe [Path], to :: Maybe Path } 
 	| ConsoleInput { input :: String, to :: Maybe Path } deriving Show	
 data Rm = Remove {removeArgs :: [Path]} deriving Show
+data Mkdir = Directory {createArg :: Path} deriving Show
 
 type Response = Either (FileSystem Bool, String) (FileSystem Bool)
 
@@ -40,7 +42,7 @@ instance Command Pwd where
 	execute curr r = Left (changeResult r True, show $ focus r)
 	
 instance Command Cd where
-	execute (Change path) r = Right $ changeFocus r path
+	execute (Change path) r = createResponse $ changeFocus r path
 			
 instance Command Ls where
 	execute (List path) r 
@@ -96,7 +98,7 @@ createAndWrite r p text =
 	if result $ exists r p then
 		writeToFile r p text
 	else
-		file r (parents p) (title p) text
+		file r p (title p) text
 			
 instance Command Rm where
 	execute (Remove paths) r = remove paths r
@@ -104,3 +106,9 @@ instance Command Rm where
 remove :: [Path] -> FileSystem a -> Response
 remove [] r = createResponse $ changeResult r True
 remove (p:ps) r = remove ps $ removeElement r p 
+
+instance Command Mkdir where
+	execute (Directory path) r = createResponse $ folder r dirPath dirName 
+		where
+			dirName = title path
+			dirPath = path

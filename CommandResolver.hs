@@ -17,7 +17,7 @@ import Data.Char (toUpper)
 
 import FileSystem
 
-data CommandMacros = PWD | CD |	LS | CAT | RM deriving (Show, Eq, Read)
+data CommandMacros = PWD | CD |	LS | CAT | RM | MKDIR deriving (Show, Eq, Read)
 type ResolvedCommand c = Either c String
 
 resolveMacro :: String -> Maybe CommandMacros
@@ -27,6 +27,7 @@ resolveMacro m
 	| m == "ls" = Just LS 
 	| m == "cat" = Just CAT 
 	| m == "rm" = Just RM 
+	| m == "mkdir" = Just MKDIR 
 	| otherwise = Nothing
 
 resolveCommand :: (CommandResolver c, Command c) =>
@@ -73,4 +74,8 @@ toResolve focus = fmap (fromString focus) . listToMaybe . tail . dropWhile check
 
 instance CommandResolver Rm where
 	resolve paths@(x:xs) focus = Left $ Remove $ map (fromString focus) paths
+	resolve i _ = Right $ failedResolveError $ concat i
+	
+instance CommandResolver Mkdir where
+	resolve path@(x:[]) focus = Left $ Directory $ fromString focus x
 	resolve i _ = Right $ failedResolveError $ concat i

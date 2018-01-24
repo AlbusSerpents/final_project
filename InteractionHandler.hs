@@ -1,17 +1,12 @@
-module InteractionHandler
-(
-	interactiveMode
-)
-
-where
-
 import Data.Maybe (fromJust, isNothing, Maybe)
 import Commands
-import FileSystem
+import FileSystem (root, FileSystem, focus)
 import CommandResolver
-import Path
 
 import System.IO
+
+main = do
+	interactiveMode root 
 
 processCommand :: FileSystem Bool -> Maybe CommandMacros -> [String] -> IO Response
 processCommand r jMacro arr
@@ -21,6 +16,7 @@ processCommand r jMacro arr
 	| cmd == LS = executeCommand r $ (resolveCommand arr path :: ResolvedCommand Ls)
 	| cmd == CAT = executeCommand r $ (resolveCommand arr path :: ResolvedCommand Cat)
 	| cmd == RM = executeCommand r $ (resolveCommand arr path :: ResolvedCommand Rm)
+	| cmd == MKDIR = executeCommand r $ (resolveCommand arr path :: ResolvedCommand Mkdir)
 	| otherwise = return $ Left (r, "Unsupported command!")
 	where
 		cmd = fromJust jMacro

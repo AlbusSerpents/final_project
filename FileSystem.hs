@@ -39,7 +39,14 @@ instance Show (FileSystem a) where
 	show = show . rootDir
 	
 changeFocus :: FileSystem a -> P.Path -> FileSystem Bool
-changeFocus (Root rd focus _) path = Root rd path True
+changeFocus r@(Root rd focus _) path  
+	| found && isFolder target = Root rd path True
+	| otherwise = Root rd focus False
+	where
+		target = find r path
+		found = isJust target
+		isFolder (Just (Folder _ _)) = True
+		isFolder _ = False
 
 changeResult :: FileSystem a -> b -> FileSystem b
 changeResult (Root rd focus res) newRes = Root rd focus newRes 
