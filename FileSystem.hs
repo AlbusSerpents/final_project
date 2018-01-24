@@ -140,9 +140,9 @@ hasChild (File _ _) _ = False
 hasChild (Folder _ children) targetName = elem targetName $ map name children
 
 find :: FileSystem a -> P.Path -> Maybe FileSystemElement
-find (Root rd focus res) p = recursiveFind rd names
-	where 
-		names = P.unroot p
+find (Root rd focus res) p
+	| P.unroot p == [] = Just rd 
+	| otherwise = recursiveFind rd $ P.content p
 		
 recursiveFind :: FileSystemElement -> [P.Name] -> Maybe FileSystemElement
 recursiveFind f [] = Just f
