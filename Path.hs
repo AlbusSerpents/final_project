@@ -15,6 +15,7 @@ module Path
 where
 
 import System.FilePath (splitPath)
+import Data.List (delete, intersperse)
 
 type Name = String
 
@@ -23,7 +24,7 @@ data Path = Absolute {content :: [Name]} | Relative {content :: [Name], base :: 
 	
 instance Show Path where
 	show (Relative c _) = show $ concat $ relative:c
-	show (Absolute c) = show $ concat $ c
+	show (Absolute c) = show $ concat $ (head c):(intersperse root $ tail c)
 
 this :: Name
 this = "."
@@ -57,7 +58,7 @@ toAbsolute (Relative c p) = Absolute $ absoluteName ++ c
 	
 fromString :: Path -> FilePath -> Path
 fromString p fp 
-	| head split == root = Absolute $ tail split
+	| head split == root = Absolute $ root:(map (delete '/') $ tail split)
 	| otherwise = Relative split p
 	where
 		split = splitPath fp
