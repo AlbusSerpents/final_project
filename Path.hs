@@ -9,7 +9,7 @@ module Path
 	parent,
 	rootPath,
 	unroot,
-	toAbsolute
+	content
 )
 
 where
