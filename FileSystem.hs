@@ -145,6 +145,7 @@ find (Root rd focus res) p = recursiveFind rd names
 		names = P.unroot p
 		
 recursiveFind :: FileSystemElement -> [P.Name] -> Maybe FileSystemElement
+recursiveFind f [] = Just f
 recursiveFind f@(File name _) (n:ns)
 	| name == n && ns == [] = Just f
 	| otherwise = Nothing
