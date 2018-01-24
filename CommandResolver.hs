@@ -30,7 +30,7 @@ resolveMacro m
 	| otherwise = Nothing
 
 resolveCommand :: (CommandResolver c, Command c) =>
-		[String] -> ResolvedCommand c
+		[String] -> Path -> ResolvedCommand c 
 resolveCommand args = resolve args
 	
 streamRedirect = ">"
@@ -39,38 +39,38 @@ failedResolveError :: String -> String
 failedResolveError i = "Error while reading command: " ++ i
 
 class CommandResolver c where
-	resolve :: [String] -> Either c String
+	resolve :: [String] -> Path -> Either c String
 
 instance CommandResolver Pwd where
-	resolve [] = Left Current
-	resolve i = Right $ failedResolveError $ concat i
+	resolve [] _ = Left Current
+	resolve i _ = Right $ failedResolveError $ concat i
 	
 instance CommandResolver Cd where
-	resolve (path:[]) = Left $ Change $ fromString path
-	resolve i = Right $ failedResolveError $ concat i
+	resolve (path:[]) focus = Left $ Change $ fromString focus path
+	resolve i _ = Right $ failedResolveError $ concat i
 	
 instance CommandResolver Ls where
-	resolve [] = Left $ List Nothing
-	resolve (path:[]) = Left $ List $ Just $ fromString path
-	resolve i = Right $ failedResolveError $ concat i
+	resolve [] focus = Left $ List Nothing
+	resolve (path:[]) focus = Left $ List $ Just $ fromString focus path
+	resolve i _ = Right $ failedResolveError $ concat i
 	
 instance CommandResolver Cat where
-	resolve args 
+	resolve args focus
 		| streamRedirect `elem` args = 
-			Left $ Concat (fromResolve args) (toResolve args)
+			Left $ Concat (fromResolve focus args) (toResolve focus args)
 		| otherwise = Right $ failedResolveError $ concat args
 
 check = (/=) streamRedirect
 
-fromResolve :: [String] -> Maybe [Path]
-fromResolve = func . takeWhile check
+fromResolve :: Path -> [String] -> Maybe [Path]
+fromResolve focus = pullValues . takeWhile check
 	where
-		func [] = Nothing
-		func list = sequence $ map (Just . fromString) list
+		pullValues [] = Nothing
+		pullValues list = sequence $ map (Just . fromString focus) list
 	
-toResolve :: [String] -> Maybe Path
-toResolve = fmap fromString . listToMaybe . tail . dropWhile check
+toResolve :: Path -> [String] -> Maybe Path
+toResolve focus = fmap (fromString focus) . listToMaybe . tail . dropWhile check
 
 instance CommandResolver Rm where
-	resolve paths@(x:xs) = Left $ Remove $ map fromString paths
-	resolve i = Right $ failedResolveError $ concat i
+	resolve paths@(x:xs) focus = Left $ Remove $ map (fromString focus) paths
+	resolve i _ = Right $ failedResolveError $ concat i
