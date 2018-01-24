@@ -1,20 +1,15 @@
 module Path
 (
 	Path,
-	content,
 	Name,
-	isFull,
-	isRelative,
 	fromString,
-	fromNames,
-	hasNoContent,
-	isParent,
 	parents,
 	title,
 	root,
-	this,
-	relative,
-	parent
+	parent,
+	rootPath,
+	unroot,
+	toAbsolute
 )
 
 where
@@ -23,12 +18,12 @@ import System.FilePath (splitPath)
 
 type Name = String
 
-data Path = Full {content :: [Name]} | Relative {content :: [Name]} 
+data Path = Absolute {content :: [Name]} | Relative {content :: [Name], base :: Path} 
 	deriving (Eq)
 	
 instance Show Path where
-	show (Relative c) = show $ concat $ relative:c
-	show (Full c) = show $ concat c
+	show (Relative c _) = show $ concat $ relative:c
+	show (Absolute c) = show $ concat $ c
 
 this :: Name
 this = "."
@@ -41,36 +36,28 @@ relative = this ++ root
 
 parent :: Name
 parent = this ++ this ++ root
+
+rootPath :: Path
+rootPath = Absolute [root]
 	
-isFull :: Path -> Bool
-isFull (Full _) = True
-isFull _ = False
-
-isRelative :: Path -> Bool
-isRelative (Relative _) = True
-isRelative _ = False
-
-hasNoContent :: Path -> Bool
-hasNoContent p = content p == []
-
-isParent :: Name -> Bool
-isParent n = n == parent
-
 title :: Path -> Name
 title = last . content
 
-parents :: Path -> [Name]
-parents = init . content
+parents :: Path -> Path
+parents = Absolute . init . content
 
-fromString :: FilePath -> Path
-fromString fp 
-	| head split == root = Full $ tail split
-	| otherwise = Relative split
+unroot :: Path -> [Name]
+unroot (Absolute (n:ns)) = ns
+	
+toAbsolute :: Path -> Path
+toAbsolute a@(Absolute c) = a
+toAbsolute (Relative c p) = Absolute $ absoluteName ++ c 
+	where
+		absoluteName = content $ toAbsolute p
+	
+fromString :: Path -> FilePath -> Path
+fromString p fp 
+	| head split == root = Absolute $ tail split
+	| otherwise = Relative split p
 	where
 		split = splitPath fp
-
-fromNames :: [Name] -> Path
-fromNames [] = Relative []
-fromNames ns@(x:xs) 
-	| root == x = Full xs
-	| otherwise = Relative ns
