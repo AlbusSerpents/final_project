@@ -6,7 +6,9 @@ module Path
 	parents,
 	title,
 	root,
+	this,
 	parent,
+	parentOnly,
 	rootPath,
 	unroot,
 	content
@@ -35,6 +37,9 @@ root = "/"
 relative :: Name
 relative = this ++ root	
 
+parentOnly :: Name
+parentOnly = this ++ this
+
 parent :: Name
 parent = this ++ this ++ root
 
@@ -59,6 +64,7 @@ toAbsolute (Relative c p) = Absolute $ absoluteName ++ c
 	
 fromString :: Path -> FilePath -> Path
 fromString p fp 
+	| fp == parentOnly = toAbsolute $ Relative [] $ parents p
 	| head split == root = Absolute $ root:(map (delete '/') $ tail split)
 	| head split == parent = toAbsolute $ Relative (tail split) $ parents p
 	| otherwise = toAbsolute $ Relative split p
