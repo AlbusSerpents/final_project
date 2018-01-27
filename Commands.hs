@@ -96,9 +96,12 @@ createAndWrite :: FileSystem a -> Path -> String -> Response
 createAndWrite r p text = 
 	createResponse $
 	if result $ exists r p then
-		writeToFile r p text
+		writeToFile r path text
 	else
-		file r p (title p) text
+		file r path fileName text
+	where
+		path = parents p
+		fileName = title p
 			
 instance Command Rm where
 	execute (Remove paths) r = remove paths r
@@ -111,4 +114,4 @@ instance Command Mkdir where
 	execute (Directory path) r = createResponse $ folder r dirPath dirName 
 		where
 			dirName = title path
-			dirPath = path
+			dirPath = parents path
