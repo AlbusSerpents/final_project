@@ -61,9 +61,8 @@ folder :: FileSystem a -> P.Path -> P.Name -> FileSystem Bool
 folder r p folderName = addElement r p $ Folder folderName []
 	
 addElement :: FileSystem a -> P.Path -> FileSystemElement -> FileSystem Bool
-addElement r path newElement = executeAction r parentPath (`add` newElement)
+addElement r path newElement = executeAction r path (`add` newElement)
 	where
-		parentPath = P.parents path
 		add (File _ _) _ = Nothing
 		add (Folder n c) new = Just $ Folder n (new:c)
 
