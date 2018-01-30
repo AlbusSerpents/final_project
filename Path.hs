@@ -16,7 +16,7 @@ module Path
 
 where
 
-import System.FilePath (splitPath)
+import System.FilePath (splitPath, pathSeparators)
 import Data.List (delete, intersperse)
 
 type Name = String
@@ -64,10 +64,17 @@ toAbsolute (Relative c p) = Absolute $ absoluteName ++ c
 	
 fromString :: Path -> FilePath -> Path
 fromString p fp 
-	| fp == relative = toAbsolute $ Relative [] p
-	| fp == parentOnly = toAbsolute $ Relative [] $ parents p
-	| head split == root = Absolute $ root:(map (delete '/') $ tail split)
-	| head split == parent = toAbsolute $ Relative (tail split) $ parents p
-	| otherwise = toAbsolute $ Relative split p
+	| fp == this = makeAboslute [] p
+	| fp == parentOnly = makeAboslute [] $ parents p
+	| head split == root = Absolute $ root:(cleanPath $ tail split)
+	| head split == parent = makeAboslute (cleanPath $ tail split) $ parents p
+	| otherwise = makeAboslute (cleanPath $ split) p
 	where
+		makeAboslute p b = toAbsolute $ Relative p b
 		split = splitPath fp
+		
+cleanPath :: [Name] -> [Name]		
+cleanPath p = singlePs w $ singlePs l p
+	where
+		(w:l:[]) = pathSeparators
+		singlePs ps = map (\e -> delete ps e)
